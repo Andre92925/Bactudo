@@ -1,0 +1,74 @@
+import requests
+from bs4 import BeautifulSoup
+from telegram import Bot
+import time
+
+# Variáveis de ambiente
+TELEGRAM_TOKEN = 'SEU_TOKEN_AQUI'
+TELEGRAM_CHAT_ID = 'SEU_CHAT_ID_AQUI'
+
+# Inicializando o bot do Telegram
+bot = Bot(token=TELEGRAM_TOKEN)
+
+# Função para enviar mensagem para o Telegram
+def send_telegram_message(message):
+    bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
+
+# Função para pegar os resultados do Bac Bo do casinoscores.com
+def get_bac_bo_results():
+    url = 'https://casinoscores.com/pt-br/bac-bo/'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # Pegando os resultados mais recentes
+    results = soup.find_all('div', class_='game-result')
+    
+    # Para simplificação, apenas pegando os últimos 6 resultados
+    last_results = [result.get_text(strip=True) for result in results[:6]]
+    return last_results
+
+# Função para identificar o padrão baseado nos resultados
+def check_pattern(results):
+    pattern_A = ['🔴', '🔴', '🔵', '🔵', '🔴', '🔴']
+    pattern_B = ['🔵', '🔵', '🔴', '🔴', '🔵', '🔵']
+    pattern_C = ['🔴', '🔵', '🔵', '🔴', '🔵', '🔵']
+    pattern_D = ['🔵', '🔴', '🔴', '🔵', '🔴', '🔴']
+    
+    # Comparando os resultados com os padrões
+    if results == pattern_A:
+        return '🔵'
+    elif results == pattern_B:
+        return '🔴'
+    elif results == pattern_C:
+        return '🔴'
+    elif results == pattern_D:
+        return '🔵'
+    else:
+        return None
+
+# Função principal do bot
+def run_bot():
+    while True:
+        try:
+            # Pega os últimos 6 resultados do Bac Bo
+            last_results = get_bac_bo_results()
+            
+            # Se tivermos 6 resultados, checamos os padrões
+            if len(last_results) == 6:
+                pattern_result = check_pattern(last_results)
+                if pattern_result:
+                    message = f'Sinal: {pattern_result}'
+                    send_telegram_message(message)
+                    print(f'Sinal enviado: {message}')
+                else:
+                    print('Nenhum padrão encontrado.')
+            
+            # Espera 60 segundos antes de rodar novamente
+            time.sleep(60)
+        
+        except Exception as e:
+            print(f'Ocorreu um erro: {e}')
+            time.sleep(60)
+
+if __name__ == '__main__':
+    run_bot()
